@@ -1,13 +1,6 @@
-
 const express = require('express');
 const path = require('path');
-
-
 const mysql = require('mysql');
-
-
-
-
 const app = express();
 
 const connection = mysql.createConnection({host: 'localhost',
@@ -51,6 +44,18 @@ connection.connect(function(err) {
     console.log("Connected to DB");
 });
 
+//#region Login 
+app.get('/Login', function(req, res){
+  res.render('index');
+})
+
+
+//#endregion
+
+//#region Test
+
+
+
 app.get('/about', (req, res)=> {
     let query = 'select * from user';
     console.log('Hello');
@@ -65,6 +70,25 @@ app.get('/about', (req, res)=> {
     
 })
 
+app.get('/info', (req, res)=> {
+  let query = 'select * from image';
+  console.log('Hello');
+  connection.query(query, (error, result)=> {
+      if (error){
+          console.log(error)
+      }
+      console.log(result);
+      res.json(result); // res sends to the front end. 
+  })
+  
+
+})
+
+//#endregion 
+
+// setting up the server
 app.listen(5000, function() {
   console.log("App running on port: " + 5000);
 })
+
+module.exports = app;
