@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const mysql = require('mysql');
 const app = express();
+const bcrypt = require('bcryptjs');
 
 
 // Connecting to the DB
@@ -128,96 +129,94 @@ app.get('/home', (req, res, next) => {
 });
 
 // Post login data
-app.post('/login', (req, res, next) => {
-  
-  let username = req.body.username,
-  password = req.body.password,
-  user = username;
 
-  const login_query = `SELECT * FROM user WHERE Username= ?`;
-  if(username == "" || password ==""){
-    // req.session.err = true;
-    // req.session.errMsg = "Missing details";
-    return res.redirect('/login');
-  }
-   else{
-    connection.query(login_query, [username], (error, result) => {
-      if (error) {
-          //res.json(new StandardResponse(0, error, 'An error occurred while browsing flights', 'An error occurred while browsing flights. Contact admin.'));
-      } else {
-          if(result.length == 0){
-            // req.session.err = true;
-            // req.session.errMsg = "Email does not exist";
-            return res.redirect('/login');
-          }
-          //response.json(new StandardResponse(1, flight_result, '', ''));
-          let dbPassword = result[0].Password;
-          let ID = result[0].guid;
-          //const role_query = `SELECT r.name FROM member_role m JOIN roles r ON m.role_guid= r.guid WHERE m.member_guid= ?`;
-          //connection.query(role_query, [ID], (error, role_result) => {
-          if(dbPassword == password){
-              // req.session.loggedIn = true;
-              // req.session.user = user;
-              // req.session.err = null;
-              // req.session.errMsg = "";
-            return res.redirect('/home');
-          }else {
-            //req.session.errMsg = "Details Incorrect";
-            return res.redirect('/login');
-          }
-              
-          }
+app.post('/login', async (req, res) => {
+  const {email, password} = req.body;
+
+  connection.query('SELECT * FROM user WHERE email = ?', [email], async (error, result) => {
+    if(!(await bcrypt.compare(password, result[0].password)))
+    {
+      console.log(error);
+      console.log('Email or password incorrect');
+    }
+    else
+    {
+      console.log(result);
+      return res.redirect('/home');
+    }
   });
-}
-
-
-
-
-
-
-  // let query = 'select * from user';
-  //   connection.query(query, (error, result)=> {
-  //       if (error){
-  //           console.log(error)
-  //       }
-  //       console.log(result);
-  //       res.json(result); // res sends to the front end. 
-  // user.login(req.body.username, req.body.password, function(result) {
-  //     if(result) {
-  //         // Store the user data in a session.
-  //         req.session.user = result;
-  //         req.session.opp = 1;
-  //         // redirect the user to the home page.
-  //         res.redirect('/home');
-  //     }else {
-  //         // if the login function returns null send this error message back to the user.
-  //         res.send('Username/Password incorrect!');
-  //     }
-  // })
-
 });
 
-
 // Post register data
-app.post('/register', (req, res, next) => {
 
-  let {fullname, username, password} = req.body;
+app.post('/register', async(req, res, next) => {
 
-  if(fullname == "" || username == "" || password == ""){
-    // req.session.err = true;
-    // req.session.errMsg = "Missing details";
-    return res.redirect('/');
-  }else {
-    const member_query = `INSERT INTO user(Username, Password, First_Name, Last_Name, Email) VALUES (?, ?, ?, ?, ?)`;
+  const {username, password, email} = req.body;
+  let hashedPassword = await bcrypt.hash(password, 8)
+  connection.query('INSERT INTO user SET ?', {username: username, password: hashedPassword , email: email}, (error, result) => {
+    if(error) {
+      console.log(error);
+    } 
+    else { //data successfully inserted into the user table
+      console.log(result);
+    }
+  });
+});
 
-    connection.query(member_query, [username, password, fullname, fullname, fullname], (error, user_result) => {
-        if (error) {
-            //res.json(new StandardResponse(0, error, 'An error occurred while creating a member.', 'An error occurred while creating a plane. Contact member.'));
-        } else {
-          return res.redirect('/home');
-        }
-    });
+// Get loggout page
+app.get('/loggout', (req, res, next) => {
+  // Check if the session is exist
+  if(req.session.user) {
+      // destroy the session and redirect the user to the index page.
+      req.session.destroy(function() {
+          res.redirect('/');
+      });
   }
+});
+
+app.listen(5000, function() {
+  console.log("App running on port: " + 5000);
+})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// app.post('/register', (req, res, next) => {
+
+//   const {fullname, username, lastname, password, email} = req.body;
+
+//   if(fullname == "" || username == "" || password == ""|| lastname == "" || email == ""){
+//     // req.session.err = true;
+//     // req.session.errMsg = "Missing details";
+//     return res.redirect('/');
+//   }else {
+//     const member_query = `INSERT INTO user(Username, Password, First_Name, Last_Name, Email) VALUES (?, ?, ?, ?, ?)`;
+
+//     connection.query(member_query, [username, password, fullname, lastname, email], (error, user_result) => {
+//         if (error) {
+//             //res.json(new StandardResponse(0, error, 'An error occurred while creating a member.', 'An error occurred while creating a plane. Contact member.'));
+//         } else {
+//           return res.redirect('/');
+          
+//         }
+//     });
+//   }
   // // prepare an object containing all user inputs.
   // let userInput = {
   //     username: req.body.username,
@@ -241,30 +240,75 @@ app.post('/register', (req, res, next) => {
   //     }
   // });
 
-});
+// });
 
 
-// Get loggout page
-app.get('/loggout', (req, res, next) => {
-  // Check if the session is exist
-  if(req.session.user) {
-      // destroy the session and redirect the user to the index page.
-      req.session.destroy(function() {
-          res.redirect('/');
-      });
-  }
-});
 
-app.listen(5000, function() {
-  console.log("App running on port: " + 5000);
-})
+// app.post('/login', (req, res, next) => {
+  
+//   let username = req.body.username,
+//   password = req.body.password,
+//   user = username;
 
-//#region File Upload 
+//   const login_query = `SELECT * FROM user WHERE Username= ?`;
+//   if(username == "" || password ==""){
+//     // req.session.err = true;
+//     // req.session.errMsg = "Missing details";
+//     return res.redirect('/login');
+//   }
+//    else{
+//     connection.query(login_query, [username], (error, result) => {
+//       if (error) {
+//           //res.json(new StandardResponse(0, error, 'An error occurred while browsing flights', 'An error occurred while browsing flights. Contact admin.'));
+//       } else {
+//           if(result.length == 0){
+//             // req.session.err = true;
+//             // req.session.errMsg = "Email does not exist";
+//             return res.redirect('/login');
+//           }
+//           //response.json(new StandardResponse(1, flight_result, '', ''));
+//           let dbPassword = result[0].Password;
+//           let ID = result[0].guid;
+//           //const role_query = `SELECT r.name FROM member_role m JOIN roles r ON m.role_guid= r.guid WHERE m.member_guid= ?`;
+//           //connection.query(role_query, [ID], (error, role_result) => {
+//           if(dbPassword == password){
+//               // req.session.loggedIn = true;
+//               // req.session.user = user;
+//               // req.session.err = null;
+//               // req.session.errMsg = "";
+//             return res.redirect('/home');
+//           }else {
+//             //req.session.errMsg = "Details Incorrect";
+//             return res.redirect('/login');
+//           }
+              
+//           }
+//   });
+// }
 
-const fileUpload = require('express-fileupload')
-const port = process.env.PORT || 5000;
 
-// default option 
-app.use(fileUpload());
 
-//#endregion
+
+
+
+//   // let query = 'select * from user';
+//   //   connection.query(query, (error, result)=> {
+//   //       if (error){
+//   //           console.log(error)
+//   //       }
+//   //       console.log(result);
+//   //       res.json(result); // res sends to the front end. 
+//   // user.login(req.body.username, req.body.password, function(result) {
+//   //     if(result) {
+//   //         // Store the user data in a session.
+//   //         req.session.user = result;
+//   //         req.session.opp = 1;
+//   //         // redirect the user to the home page.
+//   //         res.redirect('/home');
+//   //     }else {
+//   //         // if the login function returns null send this error message back to the user.
+//   //         res.send('Username/Password incorrect!');
+//   //     }
+//   // })
+
+// });
