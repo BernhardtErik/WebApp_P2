@@ -1,10 +1,18 @@
 const express = require('express');
+const fileUpload = require('express-fileupload');
+const serveIndex = require('serve-index');
 const path = require('path');
 const mysql = require('mysql');
 const app = express();
+const rimraf = require("rimraf");
 const bcrypt = require('bcryptjs');
+const fs = require('fs');
 
+const session    = require("express-session");
+const nedbstore  = require("nedb-session-store")(session);
+const    nedb      = require("nedb");
 
+app.locals.basedir = __dirname;
 // Connecting to the DB
 const connection = mysql.createConnection({host: 'localhost',
     port: 3306,
@@ -14,17 +22,40 @@ const connection = mysql.createConnection({host: 'localhost',
     multipleStatements: true
 });
 
+// Sessions
+app.use(
+  session({
+    name: "TheCookie",
+    secret: "InTheBleakMidwinter",
+    resave: true,
+    saveUnitialized: true,
+    cookie:{path:"/", httpOnly: true, maxAge: 1000*60*60*6},
+    store: new nedbstore({filename: "db/sessions.db"})
+  })
+)
+
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'pug');
 
+app.use('/uploads', express.static('uploads'), serveIndex('uploads', {'icons': true}));
+app.use(fileUpload());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+const createDir = (dirpath) => {
+  fs.mkdirSync(dirpath, { recursive: true}, (error) => {
+    if(error) {
+      console.error('An error has occured: ', error);
+    } else {
+      console.log('Directory Created')
+    }
+  });
+}
 
 
-// 
+//#region 404
 /* catch 404 and forward to error handler
 app.use(function(req, res, next) {
   next(createError(404));
@@ -40,6 +71,7 @@ app.use(function(err, req, res, next) {
   res.status(err.status || 500);
   res.render('error');
 });*/
+//#endregion
 
 
 connection.connect(function(err) {
@@ -51,7 +83,12 @@ connection.connect(function(err) {
 
 //#region Login 
 app.get('/Login', function(req, res){
-  res.render('index');
+  if(!req.session.loggedIn){
+    res.render('index');
+  }
+  else{
+    res.redirect('/home');
+  }
 })
 //#endregion
 
@@ -75,35 +112,78 @@ app.get('/Login', function(req, res){
 
 //#endregion
 
-//#region Test
+app.get('/files/:uname', (req, res) => {
+  let user = req.params.uname;
 
-app.get('/about', (req, res)=> {
-    let query = 'select * from user';
-    console.log('Hello');
-    connection.query(query, (error, result)=> {
-        if (error){
-            console.log(error)
-        }
-        console.log(result);
-        res.json(result); // res sends to the front end. 
-    })
-})
-app.get('/info', (req, res)=> {
-  let query = 'select * from image';
-  console.log('Hello');
-  connection.query(query, (error, result)=> {
-      if (error){
-          console.log(error)
+  // let sql_SelectAll = "SELECT * FROM ?? WHERE ?? = ?";
+  // let inserts = ['projects','project_name',projectID]
+  // let sql = mysql.format(sql_SelectAll, inserts);
+  // con.query(sql, function(err, result){
+    //let readpath = projectID;
+    const directoryPath = path.join(__dirname, '/uploads/' + user);
+    var file;
+    fs.readdir(directoryPath, function (err, files) {
+      //handling error
+      if (err) {
+        return console.log('Unable to scan directory: ' + err);
       }
-      console.log(result);
-      res.json(result); // res sends to the front end. 
-  })
+      //listing all files using forEach
+      files.forEach(function (file) {
+        // Do whatever you want to do with the file
+      });
+      //res.render('files', buildParams(req, {files, file, readpath, projectID}));
+      res.render('files', {files, file, user});
+    });
+ // });
 })
 
-//#endregion 
+app.get('/upload' , (req, res) => {
+  let loggdIn = req.session.loggedIn,
+      user  = req.session.user;
+      console.log(user);
+  res.render('upload', {loggedIn, user});
+})
 
-// setting up the server
+app.post('/upload/:user', function(req, res) {
+  //let projectID = req.params.projectID,
+      let sampleFile,
+      uploadPath,
+      user = req.params.user,
+      directory = __dirname + '/uploads/' + user + '/';
 
+    if (!req.files || Object.keys(req.files).length === 0) {
+      res.redirect("/files/" + uName);
+      return;
+    }
+    sampleFile = req.files.sampleFile;
+    uploadPath = directory + sampleFile.name;
+
+    sampleFile.mv(uploadPath, function(err) {
+      if (err) {
+        return res.status(500).send(err);
+      }
+      res.redirect("/home");
+    });
+});
+
+app.post('/delete/:user', function(req, res) {
+  //let projectID = req.params.projectID;
+  var file = req.body.delfile,
+  user = req.params.user;
+  //__dirname once path can be grabed from url
+  const paths = __dirname+ '/uploads/' + user + '/' + file
+  try {
+    fs.unlinkSync(paths)
+    //res.send('Deleted: ' + file);
+    res.redirect("/home");
+    //file removed
+  } catch(err) {
+    console.error(err)
+    res.send('File: ' + file +' does not exist');
+  }
+})
+
+// Setting up the server
 // Get the index page
 app.get('/', (req, res, next) => {
   //let user = req.session.user;
@@ -125,15 +205,17 @@ app.get('/home', (req, res, next) => {
   //     return;
   // }
   //res.redirect('/home');
-  res.render('home');
+  let loggdIn = req.session.loggedIn,
+      user  = req.session.user;
+
+  res.render('home', {loggdIn, user});
 });
 
 // Post login data
-
 app.post('/login', async (req, res) => {
-  const {email, password} = req.body;
+  const {username, password} = req.body;
 
-  connection.query('SELECT * FROM user WHERE email = ?', [email], async (error, result) => {
+  connection.query('SELECT * FROM user WHERE username = ?', [username], async (error, result) => {
     if(!(await bcrypt.compare(password, result[0].password)))
     {
       console.log(error);
@@ -141,6 +223,8 @@ app.post('/login', async (req, res) => {
     }
     else
     {
+      req.session.loggedIn = true;
+      req.session.user = username;
       console.log(result);
       return res.redirect('/home');
     }
@@ -148,31 +232,32 @@ app.post('/login', async (req, res) => {
 });
 
 // Post register data
-
 app.post('/register', async(req, res, next) => {
-
   const {username, password, email} = req.body;
+  if(username == "" || password == ""|| email == ""){
+    return res.redirect('/');
+  }
   let hashedPassword = await bcrypt.hash(password, 8)
+  let dir = username;
+  let directory = __dirname + '/uploads/' + dir + '/';
   connection.query('INSERT INTO user SET ?', {username: username, password: hashedPassword , email: email}, (error, result) => {
     if(error) {
       console.log(error);
     } 
     else { //data successfully inserted into the user table
       console.log(result);
+      createDir(directory);
+      res.redirect('/Login')
     }
   });
 });
 
 // Get loggout page
-app.get('/loggout', (req, res, next) => {
-  // Check if the session is exist
-  if(req.session.user) {
-      // destroy the session and redirect the user to the index page.
-      req.session.destroy(function() {
-          res.redirect('/');
-      });
-  }
-});
+app.get('/logout', function(req, res) {
+  req.session.user = undefined;
+  req.session.loggedIn = false;
+  res.redirect('/');
+})
 
 app.listen(5000, function() {
   console.log("App running on port: " + 5000);

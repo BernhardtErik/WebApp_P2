@@ -13,10 +13,16 @@
     "bcrypt": "^5.0.1",
     "bcryptjs": "^2.4.3",
     "express": "^4.17.1",
+    "express-fileupload": "^1.2.1",
     "express-session": "^1.17.2",
+    "fs": "0.0.1-security",
     "mysql": "^2.18.1",
+    "nedb": "^1.8.0",
+    "nedb-session-store": "^1.1.2",
     "path": "^0.12.7",
-    "pug": "^3.0.2"
+    "pug": "^3.0.2",
+    "rimraf": "^3.0.2",
+    "serve-index": "^1.9.1"
   },
   "devDependencies": {
     "nodemon": "^2.0.14"

@@ -5,14 +5,15 @@ mixin message(opp, name)
         h1.greeting Logged in as 
             span=name 
     else 
-        h1.greeting  
-            span=name 
-            |  You have successfully logged in  !
-
+        h1.greeting Welcome 
+            span=user 
+            |  to our 
+    form(style='display: inline' action="/files/"+ user method='get')
+        button.btn-link Files
 
 append links 
     li(style="float: right;")
-        a(href="/loggout") Loggout 
+        a(href="/logout") Loggout 
 
 block content
     .dashboard 

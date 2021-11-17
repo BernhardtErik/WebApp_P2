@@ -1,0 +1,38 @@
+extends layout
+block content
+  h1 Images
+  form(ref='uploadForm'  
+    id='uploadForm'  
+    action='/upload/' + user
+    method='post'  
+    encType="multipart/form-data") 
+      .upload-btn-wrapper
+        .up
+        input.file-select(type="file" name="sampleFile" class='file')  
+      button.btn-file#upload(type='submit') Upload 
+  br 
+  br 
+  
+  form(ref='deleteForm'  
+    id='deleteForm'  
+    action='/delete/' + user
+    method='post'  
+    encType="multipart/form-data") 
+      input.delete(type='text' name='delfile' placeholder='File name' autocomplete="off")  
+      button.btn-file#delete(type='submit') Delete
+      
+  table#tableID
+    caption Files
+    thead
+      tr
+        th(scope='col') File Name
+        th(scope='col') Download
+    tbody
+    each file in files 
+      tr
+        td(data-label='Fine Name')= file
+        td(data-label='Download') 
+          a(href='/uploads/'+ user + '/' + file, download) Download
+
+          //- a(href='/uploads/projects/'+ readpath + '/' + file, download) 
+          //-   p= file
