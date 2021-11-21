@@ -2,7 +2,7 @@
 
 body 
 {
-    background-color: #F0F0F0;
+    background-color: #706a6a !important;
 }
 .table, .table td, .table tr
 {
@@ -158,4 +158,8 @@ p
 .greeting span
 {
     color: rgb(112, 172, 16);
+}
+.btn-files
+{
+    
 }

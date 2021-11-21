@@ -1,26 +1,32 @@
 extends layout
 block content
-  h1 Images
-  form(ref='uploadForm'  
-    id='uploadForm'  
+  h1(class="text-center") Images
+  form(ref='uploadForm'
+    id='uploadForm'
     action='/upload/' + user
-    method='post'  
+    method='post'
     encType="multipart/form-data") 
-      .upload-btn-wrapper
-        .up
-        input.file-select(type="file" name="sampleFile" class='file')  
-      button.btn-file#upload(type='submit') Upload 
+      .row
+        .col-3
+            input.file-select(type="file" name="sampleFile" class='file')
+        .col
+            button.btn-file#upload(type='submit' class="btn btn-secondary") Upload 
   br 
   br 
-  
-  form(ref='deleteForm'  
-    id='deleteForm'  
+
+  form(ref='deleteForm'
+    id='deleteForm'
     action='/delete/' + user
-    method='post'  
+    method='post'
     encType="multipart/form-data") 
-      input.delete(type='text' name='delfile' placeholder='File name' autocomplete="off")  
-      button.btn-file#delete(type='submit') Delete
-      
+    .row
+        .col-3
+            input.delete(type='text' name='delfile' placeholder='File name' autocomplete="off")
+        .col
+            button.btn-file#delete(type='submit' class="btn btn-danger" ) Delete
+  br
+  br
+  
   table#tableID
     caption Files
     thead
