@@ -9,6 +9,14 @@ block content
       .row
         .col-3
             input.file-select(type="file" name="sampleFile" class='file')
+            p Location 
+            input(type="text" name="location")
+            p Captured_By 
+            input(type="text" name="captured_By")
+            p Tags 
+            input(type="text" name="tags")
+            p Date 
+            input(type="date" name="date")               
         .col
             button.btn-file#upload(type='submit' class="btn btn-secondary") Upload 
   br 

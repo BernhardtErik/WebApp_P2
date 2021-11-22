@@ -158,6 +158,22 @@ app.post('/upload/:user', function(req, res) {
     sampleFile = req.files.sampleFile;
     uploadPath = directory + sampleFile.name;
 
+    // meta data
+    const {location, captured_By, tags, date} = req.body;
+    if(location == "" || captured_By == ""|| tags == "" || date == ""){
+      return res.redirect('/');
+    }else {
+      connection.query('INSERT INTO image SET ?', {location: location, captured_By: captured_By , tags: tags, date: date}, (error, result) => {
+        // if(error) {
+        //   console.log(error);
+        // } 
+        // else { //data successfully inserted into the user table
+        //   console.log(result);
+        //   res.redirect('/')
+        // }
+      });
+    };
+
     sampleFile.mv(uploadPath, function(err) {
       if (err) {
         return res.status(500).send(err);
